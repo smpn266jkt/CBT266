@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -7,7 +6,6 @@
     <title>Portal Ujian CBT Terpadu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Mencegah interaksi yang tidak diinginkan seperti blok teks */
         .no-select {
             user-select: none;
             -webkit-user-select: none;
@@ -22,7 +20,6 @@
         .bg-warning-pulse {
             animation: pulse-red 2s infinite;
         }
-        /* Loader CSS sederhana */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #2563eb;
@@ -39,21 +36,19 @@
 </head>
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800 no-select overflow-hidden">
 
-    <!-- HALAMAN LOADING (Muncul saat mengambil data sekolah pertama kali) -->
+    <!-- HALAMAN LOADING -->
     <div id="initial-loading" class="flex flex-col items-center justify-center min-h-screen absolute inset-0 z-[60] bg-white">
         <div class="loader mb-4"></div>
-        <p class="text-gray-600 font-semibold animate-pulse">Menghubungkan ke Server Sekolah...</p>
-        <p id="loading-error" class="text-red-500 text-sm mt-2 hidden"></p>
+        <p class="text-gray-600 font-semibold animate-pulse" id="loading-text">Menghubungkan ke Server Sekolah...</p>
+        <p id="loading-error" class="text-red-500 text-sm mt-2 hidden text-center px-4"></p>
     </div>
 
     <!-- HALAMAN DEPAN (LANDING PAGE) -->
     <div id="landing-page" class="hidden flex-col items-center justify-center min-h-screen p-4 bg-gray-100 absolute inset-0 z-50">
         <div class="bg-white rounded-2xl shadow-xl p-8 md:p-10 max-w-3xl w-full text-center">
             
-            <!-- FITUR BARU: ID school-logo ditambahkan -->
             <img id="school-logo" src="https://placehold.co/200x200/2563eb/ffffff?text=Loading" alt="Logo Instansi" class="w-24 h-24 md:w-28 md:h-28 object-contain mx-auto drop-shadow-md mb-4" onerror="this.src='https://placehold.co/200x200/2563eb/ffffff?text=Logo'">
             
-            <!-- Nama Sekolah Dinamis -->
             <h1 id="school-name-display" class="text-2xl md:text-3xl font-extrabold text-[#1e293b] mb-6 tracking-wide uppercase">
                 MEMUAT NAMA SEKOLAH...
             </h1>
@@ -73,7 +68,7 @@
 
             <!-- Area Input Login -->
             <div class="mb-6 text-left">
-                <label for="username" class="block text-sm font-bold text-gray-700 mb-2">Ketik Username Peserta:</label>
+                <label for="username" class="block text-sm font-bold text-gray-700 mb-2">Ketik Username / NISN Peserta:</label>
                 <input type="text" id="username" placeholder="Masukkan Username yang valid..." class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-lg text-center font-bold tracking-wider uppercase">
                 <p id="form-error" class="text-red-500 text-sm mt-2 hidden font-medium text-center"></p>
             </div>
@@ -83,7 +78,7 @@
                 <svg class="w-5 h-5 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"></path></svg>
             </button>
 
-            <p class="text-xs text-gray-400 font-medium" id="footer-text">© 2026 App Version 2.0</p>
+            <p class="text-xs text-gray-400 font-medium" id="footer-text">© 2026 App Version 2.1 (Multi-Platform)</p>
         </div>
     </div>
 
@@ -121,48 +116,59 @@
     <script>
         let isExamActive = false;
         
+        // PENDETEKSI PERANGKAT (Deteksi iOS: iPhone/iPad)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        
         // =========================================================
         // PENTING: GANTI URL DI BAWAH INI DENGAN URL WEB APP ANDA
         // =========================================================
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgLPajObKSdO9JCZAYeTtGEVoQjxcnJibGZIrYEU2vErKwZ_O3CWy1w7-0uH6cB3I/exec";
 
-        // Mencegah shortcut dasar
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.addEventListener('copy', event => event.preventDefault());
         document.addEventListener('cut', event => event.preventDefault());
         document.addEventListener('paste', event => event.preventDefault());
 
-        window.onload = async function() {
-            if (APPS_SCRIPT_URL === "ISI_DENGAN_URL_WEB_APP_GOOGLE_SCRIPT_ANDA") {
-                showInitialError("Harap masukkan SCRIPT URL terlebih dahulu pada kode HTML.");
-                return;
+        // FUNGSI AUTO-RETRY (Anti-Overload Server untuk ratusan siswa)
+        // Fungsi ini akan mencoba memanggil server Google berkali-kali jika server sedang sibuk (Too many requests)
+        async function fetchWithRetry(url, retries = 4, delay = 1500) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Server Error");
+                    return await response.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error; // Jika percobaan terakhir gagal, lemparkan error
+                    console.log(`Server sibuk. Percobaan ulang ke-${i + 1} dalam ${delay}ms...`);
+                    // Tunggu sebelum mencoba lagi
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay += 1000; // Tambah jeda (Backoff) untuk percobaan berikutnya
+                }
             }
+        }
 
+        window.onload = async function() {
             try {
-                // Fetch data inisialisasi dari server
-                const response = await fetch(APPS_SCRIPT_URL + "?action=init");
-                const data = await response.json();
+                // Menggunakan fetchWithRetry agar inisialisasi tidak gagal saat server padat
+                const data = await fetchWithRetry(APPS_SCRIPT_URL + "?action=init", 3, 2000);
 
-                if (data.status === 'success') {
-                    // Update tampilan dengan nama sekolah
+                if (data && data.status === 'success') {
                     document.getElementById('school-name-display').innerText = data.schoolName;
                     document.getElementById('header-school-name').innerText = data.schoolName;
                     
-                    // --- FITUR BARU: Update Logo Jika Ada ---
                     if (data.schoolLogo && data.schoolLogo.trim() !== "") {
                         document.getElementById('school-logo').src = data.schoolLogo;
                     }
                     
-                    // Transisi dari Loading ke Landing Page
                     document.getElementById('initial-loading').classList.add('hidden');
                     document.getElementById('landing-page').classList.remove('hidden');
                     document.getElementById('landing-page').classList.add('flex');
                 } else {
-                    showInitialError(data.message);
+                    showInitialError(data ? data.message : "Data tidak valid.");
                 }
             } catch (error) {
                 console.error("Initialization Error:", error);
-                showInitialError("Gagal terhubung ke Server. Pastikan koneksi internet stabil.");
+                showInitialError("Gagal terhubung ke Server. Pastikan koneksi internet stabil atau muat ulang halaman.");
             }
         };
 
@@ -173,14 +179,28 @@
             document.querySelector('.loader').classList.add('hidden');
         }
 
+        // Fungsi Fullscreen yang disesuaikan
+        function enterFullScreen() {
+            // Pengecualian: Jangan paksa fullscreen API pada iOS karena Apple sangat membatasi ini
+            if (isIOS) return; 
+
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.log("Fullscreen ditolak:", err));
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        }
+
         async function startExam() {
             const usernameInput = document.getElementById('username').value.trim();
             const btn = document.getElementById('btn-masuk');
             const errorMsg = document.getElementById('form-error');
             
-            // Validasi Input
             if (usernameInput === "") {
-                errorMsg.innerText = "Username harus diisi!";
+                errorMsg.innerText = "Username / NISN harus diisi!";
                 errorMsg.classList.remove('hidden');
                 return;
             }
@@ -188,44 +208,42 @@
 
             const originalText = btn.innerHTML;
             
-            // Ubah tombol jadi status memuat
-            btn.innerHTML = 'MEMVERIFIKASI... <div class="loader inline-block ml-2 w-5 h-5 border-2"></div>';
+            // Indikasi sistem sedang bekerja keras (antre ke Google)
+            btn.innerHTML = 'MENGANTRE KE SERVER... <div class="loader inline-block ml-2 w-5 h-5 border-2"></div>';
             btn.disabled = true;
             btn.classList.add('opacity-75', 'cursor-not-allowed');
 
             try {
-                // Mengirim request login ke Apps Script
-                const response = await fetch(APPS_SCRIPT_URL + "?action=login&username=" + encodeURIComponent(usernameInput));
-                const data = await response.json();
+                // Gunakan fetchWithRetry: Akan mencoba sampai 4 kali jika 750 siswa barengan klik
+                const urlTarget = APPS_SCRIPT_URL + "?action=login&username=" + encodeURIComponent(usernameInput);
+                const data = await fetchWithRetry(urlTarget, 4, 1500);
                 
-                if (data.status === 'success') {
-                    // Decode URL yang dienkripsi dengan Base64
+                if (data && data.status === 'success') {
                     const decodedUrl = atob(data.url);
 
-                    // Tampilkan Nama Siswa di Header Ujian
                     document.getElementById('student-info-display').innerText = `${data.studentName} (${data.studentClass})`;
 
-                    // Transisi Tampilan ke Ujian
                     document.getElementById('landing-page').classList.add('hidden');
                     document.getElementById('landing-page').classList.remove('flex');
                     document.getElementById('exam-page').classList.remove('hidden');
                     document.getElementById('exam-page').classList.add('flex');
                     
-                    // Set URL Iframe
                     document.getElementById('exam-frame').src = decodedUrl;
                     
+                    enterFullScreen();
+                    
                     isExamActive = true;
-                    // Jeda sejenak sebelum mengaktifkan sensor keamanan
                     setTimeout(activateAntiCheat, 2000);
                 } else {
-                    throw new Error(data.message);
+                    throw new Error(data ? data.message : "Respons server tidak valid.");
                 }
             } catch (error) {
                 console.error("Login Error:", error);
-                errorMsg.innerText = error.message || "Gagal masuk. Coba lagi nanti.";
+                errorMsg.innerText = error.message === "Server Error" 
+                    ? "Server sedang padat. Silakan tekan tombol Masuk lagi." 
+                    : (error.message || "Gagal masuk. Periksa Username Anda.");
                 errorMsg.classList.remove('hidden');
                 
-                // Kembalikan status tombol
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 btn.classList.remove('opacity-75', 'cursor-not-allowed');
@@ -233,12 +251,26 @@
         }
 
         function activateAntiCheat() {
+            // Sensor Visibility (minimize app) AKTIF untuk SEMUA perangkat (Android, PC, iOS)
             document.addEventListener('visibilitychange', checkVisibility);
+            
+            // Sensor Fullscreen HANYA diaktifkan jika BUKAN iOS
+            if (!isIOS) {
+                document.addEventListener('fullscreenchange', checkFullScreen);
+                document.addEventListener('webkitfullscreenchange', checkFullScreen);
+            }
         }
 
         function checkVisibility() {
             if (document.visibilityState !== 'visible') {
-                triggerCheatDetected("Aplikasi di-minimize atau background");
+                triggerCheatDetected("Aplikasi di-minimize, pindah tab, atau background");
+            }
+        }
+
+        function checkFullScreen() {
+            if (isIOS) return; // Pengaman ganda untuk iOS
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                triggerCheatDetected("Keluar dari mode Layar Penuh (Full Screen)");
             }
         }
 
@@ -251,6 +283,12 @@
             const iframe = document.getElementById('exam-frame');
             iframe.src = "about:blank";
             
+            if (document.exitFullscreen && document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen && document.webkitFullscreenElement) {
+                document.webkitExitFullscreen();
+            }
+            
             document.getElementById('exam-page').classList.add('hidden');
             document.getElementById('exam-page').classList.remove('flex');
             
@@ -258,7 +296,9 @@
             document.getElementById('cheat-page').classList.add('flex');
 
             document.removeEventListener('visibilitychange', checkVisibility);
+            document.removeEventListener('fullscreenchange', checkFullScreen);
+            document.removeEventListener('webkitfullscreenchange', checkFullScreen);
         }
     </script>
 </body>
-</html>```
+</html>
