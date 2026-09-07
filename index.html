@@ -3,8 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Portal Ujian CBT Terpadu</title>
+    <title>Portal Ujian CBT Terpadu Premium</title>
+    
+    <!-- Integrasi Font Premium: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Script Tailwind CSS CDN -->
+    <!-- CATATAN UNTUK RILIS NATIVE: Saat dibuild jadi .apk atau .exe, sebaiknya proses Tailwind ini menjadi 1 file style.css statis agar loading aplikasi instan -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
         .no-select {
             user-select: none;
@@ -20,117 +40,209 @@
         .bg-warning-pulse {
             animation: pulse-red 2s infinite;
         }
+        /* Loader Premium */
         .loader {
-            border: 4px solid #f3f3f3;
+            border: 4px solid #e2e8f0;
             border-top: 4px solid #2563eb;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+        }
+        .loader-sm {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Smooth fade in */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans text-gray-800 no-select overflow-hidden">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800 no-select overflow-hidden selection:bg-blue-200">
+
+    <!-- OVERLAY KONEKSI TERPUTUS (Premium Feature) -->
+    <div id="offline-overlay" class="hidden fixed inset-0 z-[999] bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 transition-all duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl scale-100 transform transition-transform">
+            <div class="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path></svg>
+            </div>
+            <h3 class="text-xl font-extrabold text-slate-900 mb-2">Koneksi Terputus!</h3>
+            <p class="text-sm text-slate-600 font-medium mb-6 leading-relaxed">Sistem mendeteksi jaringan internet Anda terputus. Silakan periksa WiFi atau Data Seluler Anda.</p>
+            <div class="flex items-center justify-center space-x-3 text-blue-600 bg-blue-50 py-3 px-4 rounded-xl">
+                <div class="loader-sm w-5 h-5 border-[2px]"></div>
+                <span class="text-sm font-bold">Menunggu jaringan...</span>
+            </div>
+        </div>
+    </div>
 
     <!-- HALAMAN LOADING -->
-    <div id="initial-loading" class="flex flex-col items-center justify-center min-h-screen absolute inset-0 z-[60] bg-white">
-        <div class="loader mb-4"></div>
-        <p class="text-gray-600 font-semibold animate-pulse" id="loading-text">Menghubungkan ke Server Sekolah...</p>
-        <p id="loading-error" class="text-red-500 text-sm mt-2 hidden text-center px-4"></p>
+    <div id="initial-loading" class="flex flex-col items-center justify-center min-h-screen absolute inset-0 z-[60] bg-slate-50">
+        <div class="loader mb-6 shadow-md"></div>
+        <p class="text-slate-500 font-bold text-lg animate-pulse tracking-wide" id="loading-text">Menyiapkan Enkripsi Server...</p>
+        <p id="loading-error" class="text-red-500 text-sm mt-4 hidden text-center px-6 max-w-md bg-red-50 py-3 rounded-lg border border-red-200"></p>
     </div>
 
     <!-- HALAMAN DEPAN (LANDING PAGE) -->
-    <div id="landing-page" class="hidden flex-col items-center justify-center min-h-screen p-4 bg-gray-100 absolute inset-0 z-50">
-        <div class="bg-white rounded-2xl shadow-xl p-8 md:p-10 max-w-3xl w-full text-center">
+    <div id="landing-page" class="hidden flex-col items-center justify-center min-h-screen p-4 sm:p-6 bg-gradient-to-br from-slate-100 to-slate-200 absolute inset-0 z-50">
+        <div class="glass rounded-[2rem] shadow-2xl p-8 sm:p-10 max-w-2xl w-full text-center border border-white/50 fade-in">
             
-            <img id="school-logo" src="https://placehold.co/200x200/2563eb/ffffff?text=Loading" alt="Logo Instansi" class="w-24 h-24 md:w-28 md:h-28 object-contain mx-auto drop-shadow-md mb-4" onerror="this.src='https://placehold.co/200x200/2563eb/ffffff?text=Logo'">
+            <div class="relative inline-block mb-6">
+                <div class="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full"></div>
+                <img id="school-logo" src="https://placehold.co/200x200/2563eb/ffffff?text=Loading" alt="Logo Instansi" class="relative w-24 h-24 sm:w-28 sm:h-28 object-contain mx-auto drop-shadow-xl rounded-xl transition-all hover:scale-105" onerror="this.src='https://placehold.co/200x200/2563eb/ffffff?text=Logo'">
+            </div>
             
-            <h1 id="school-name-display" class="text-2xl md:text-3xl font-extrabold text-[#1e293b] mb-6 tracking-wide uppercase">
-                MEMUAT NAMA SEKOLAH...
+            <h1 id="school-name-display" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-8 tracking-tight uppercase">
+                <span class="inline-block animate-pulse h-8 w-48 bg-slate-200 rounded-md"></span> <!-- Skeleton Effect -->
             </h1>
 
-            <div class="bg-blue-50 border-l-4 border-blue-600 rounded-r-lg p-6 mb-6 text-left overflow-y-auto max-h-48 md:max-h-full">
-                <div class="flex items-center mb-4">
-                    <svg class="w-6 h-6 text-blue-700 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                    <h2 class="text-lg font-bold text-blue-800">PERATURAN & LOGIN UJIAN</h2>
+            <div class="bg-blue-50/80 border border-blue-100 rounded-2xl p-6 mb-8 text-left backdrop-blur-sm">
+                <div class="flex items-center mb-4 pb-3 border-b border-blue-200/50">
+                    <div class="bg-blue-600 p-2 rounded-lg mr-3 shadow-sm">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <h2 class="text-base sm:text-lg font-bold text-blue-900 tracking-wide">PERATURAN KEAMANAN UJIAN</h2>
                 </div>
                 
-                <ol class="space-y-2 text-[#334155] font-medium list-decimal pl-5 marker:text-blue-600 text-sm md:text-base mb-4">
-                    <li class="pl-1">Dilarang membuka Aplikasi Lain, Floating Apps, atau Split Screen.</li>
-                    <li class="pl-1">Dilarang membuka notifikasi pesan (WhatsApp, Telegram, dll).</li>
-                    <li class="pl-1">Meminimalkan layar akan menyebabkan ujian dihentikan paksa.</li>
+                <ol class="space-y-3 text-slate-700 font-medium list-decimal pl-5 marker:text-blue-500 text-sm sm:text-base">
+                    <li class="pl-2">Dilarang membuka Aplikasi Lain, Floating Apps, atau Split Screen.</li>
+                    <li class="pl-2">Dilarang membuka notifikasi pesan (WhatsApp, Telegram, dll).</li>
+                    <li class="pl-2">Sistem akan menghentikan ujian otomatis jika mendeteksi pelanggaran.</li>
                 </ol>
             </div>
 
             <!-- Area Input Login -->
-            <div class="mb-6 text-left">
-                <label for="username" class="block text-sm font-bold text-gray-700 mb-2">Ketik Username / NISN Peserta:</label>
-                <input type="text" id="username" placeholder="Masukkan Username yang valid..." class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-lg text-center font-bold tracking-wider uppercase">
-                <p id="form-error" class="text-red-500 text-sm mt-2 hidden font-medium text-center"></p>
+            <div class="mb-8 text-left relative">
+                <label for="username" class="block text-sm font-bold text-slate-600 mb-2 ml-1">Ketik Username Peserta:</label>
+                <!-- PENINGKATAN: autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" untuk mencegah keyboard behavior yg mengganggu -->
+                <input type="text" id="username" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Masukkan ID Anda..." class="w-full px-5 py-4 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all text-xl text-center font-extrabold tracking-widest uppercase bg-white/50 focus:bg-white shadow-inner">
+                <p id="form-error" class="absolute -bottom-6 left-0 right-0 text-red-500 text-sm hidden font-bold text-center"></p>
             </div>
 
-            <button id="btn-masuk" onclick="startExam()" class="inline-flex items-center justify-center w-full md:w-auto bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3.5 px-10 rounded-full text-lg shadow-lg transform transition duration-200 active:scale-95 mb-6 focus:outline-none focus:ring-4 focus:ring-blue-300">
-                MASUK UJIAN SEKARANG
-                <svg class="w-5 h-5 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"></path></svg>
+            <button id="btn-masuk" onclick="startExam()" class="group relative inline-flex items-center justify-center w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-xl text-lg shadow-[0_8px_20px_-6px_rgba(37,99,235,0.5)] transform transition-all duration-200 active:scale-[0.98] mb-6 overflow-hidden">
+                <span class="relative z-10 flex items-center">
+                    MULAI UJIAN 
+                    <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </span>
             </button>
 
-            <p class="text-xs text-gray-400 font-medium" id="footer-text">© 2026 App Version 2.1 (Multi-Platform)</p>
+            <p class="text-xs text-slate-400 font-semibold tracking-wider uppercase" id="footer-text">Exambro Premium Edition v3.0</p>
         </div>
     </div>
 
     <!-- HALAMAN UJIAN (IFRAME) -->
-    <div id="exam-page" class="hidden flex-col w-full h-screen bg-white absolute inset-0 z-40">
-        <div class="bg-blue-800 text-white px-4 py-2 flex justify-between items-center text-xs md:text-sm shadow-md z-50">
-            <div class="font-bold flex items-center gap-2">
-                <span class="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></span>
-                <span id="student-info-display">Sistem Keamanan Aktif</span>
+    <div id="exam-page" class="hidden flex-col w-full h-screen bg-slate-100 absolute inset-0 z-40">
+        <div class="bg-blue-700 text-white px-4 py-2 flex justify-between items-center text-xs md:text-sm shadow-md z-50">
+            <div class="font-bold flex items-center gap-3 bg-blue-800/50 py-1.5 px-3 rounded-lg">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <span id="student-info-display" class="tracking-wide">Menghubungkan...</span>
             </div>
-            <div id="header-school-name" class="font-semibold tracking-wider">UJIAN AKTIF</div>
+            
+            <!-- PENINGKATAN: Tombol Refresh di Header jika Iframe nge-blank/error -->
+            <div class="font-bold tracking-wider flex items-center gap-4">
+                <span id="header-school-name" class="hidden sm:inline-block">CBT PREMIUM</span>
+                <button onclick="refreshIframe()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-800 py-1.5 px-3 rounded-lg transition-colors border border-blue-500/50 shadow-sm" title="Muat Ulang Halaman Soal">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <span class="hidden md:inline text-xs">Muat Ulang</span>
+                </button>
+            </div>
         </div>
         
-        <iframe id="exam-frame" src="" class="w-full flex-grow border-none bg-white" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+        <iframe id="exam-frame" src="" class="w-full flex-grow border-none bg-white shadow-inner" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
     </div>
 
     <!-- HALAMAN PELANGGARAN -->
-    <div id="cheat-page" class="hidden flex-col items-center justify-center min-h-screen bg-warning-pulse p-4 absolute inset-0 z-50">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-10 max-w-lg w-full text-center border-t-8 border-red-600">
-            <svg class="w-20 h-20 md:w-24 md:h-24 text-red-600 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <div id="cheat-page" class="hidden flex-col items-center justify-center min-h-screen bg-warning-pulse p-4 sm:p-6 absolute inset-0 z-50">
+        <div class="bg-white rounded-[2rem] shadow-2xl p-8 sm:p-12 max-w-xl w-full text-center border-t-[10px] border-red-600 fade-in">
+            <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
             
-            <h1 class="text-2xl md:text-3xl font-extrabold text-red-700 mb-2">UJIAN SELESAI</h1>
-            <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-6">Pelanggaran Terdeteksi!</h2>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-red-700 mb-3 tracking-tight">UJIAN DIHENTIKAN</h1>
+            <h2 class="text-xl font-bold text-slate-800 mb-6 bg-slate-100 py-2 px-4 rounded-lg inline-block">Pelanggaran Terdeteksi!</h2>
             
-            <p class="text-sm md:text-base text-gray-600 mb-8 leading-relaxed">
-                Sistem mendeteksi Anda telah berpindah aplikasi, membuka notifikasi, atau mengaktifkan layar belah (Split Screen). Sesuai peraturan, <strong>ujian Anda telah dihentikan</strong>.
+            <p class="text-base text-slate-600 mb-8 leading-relaxed font-medium">
+                Sistem keamanan mendeteksi Anda telah berpindah aplikasi, membuka notifikasi layar, atau menggunakan mode <i>Split Screen</i>. 
             </p>
             
-            <p class="font-bold text-red-800 bg-red-100 p-4 rounded-lg text-sm md:text-base">
-                Silakan lapor kepada pengawas ujian di ruangan Anda.
-            </p>
+            <div class="bg-red-50 border-2 border-red-200 p-5 rounded-xl text-sm sm:text-base shadow-sm">
+                <p class="font-bold text-red-800">
+                    Silakan bawa perangkat ini dan lapor kepada pengawas ujian di ruangan Anda untuk tindakan lebih lanjut.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PERINGATAN LOGIN -->
+    <div id="login-warning-modal" class="hidden fixed inset-0 z-[100] items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-all">
+        <div class="bg-white rounded-[2rem] shadow-2xl p-8 max-w-sm w-full text-center transform transition-transform scale-100 fade-in">
+            <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-amber-100 mb-6 shadow-inner">
+                <svg class="h-10 w-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">Peringatan Login!</h3>
+            <p id="login-warning-message" class="text-base text-slate-600 mb-8 font-medium leading-relaxed bg-amber-50 p-4 rounded-xl border border-amber-100"></p>
+            <button onclick="closeWarningModal()" class="w-full inline-flex justify-center items-center rounded-xl shadow-lg px-6 py-4 bg-amber-500 text-lg font-bold text-white hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-300/50 transition-all active:scale-95">
+                Mengerti & Lanjutkan
+            </button>
         </div>
     </div>
 
     <script>
         let isExamActive = false;
         
-        // PENDETEKSI PERANGKAT (Deteksi iOS: iPhone/iPad)
+        // PENDETEKSI PERANGKAT
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         
-        // =========================================================
-        // PENTING: GANTI URL DI BAWAH INI DENGAN URL WEB APP ANDA
-        // =========================================================
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgLPajObKSdO9JCZAYeTtGEVoQjxcnJibGZIrYEU2vErKwZ_O3CWy1w7-0uH6cB3I/exec";
 
+        // Mencegah Klik Kanan & Copy Paste
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.addEventListener('copy', event => event.preventDefault());
         document.addEventListener('cut', event => event.preventDefault());
         document.addEventListener('paste', event => event.preventDefault());
 
-        // FUNGSI AUTO-RETRY (Anti-Overload Server untuk ratusan siswa)
-        // Fungsi ini akan mencoba memanggil server Google berkali-kali jika server sedang sibuk (Too many requests)
+        // MENDETEKSI KONEKSI INTERNET (Offline / Online Status)
+        window.addEventListener('offline', function() {
+            document.getElementById('offline-overlay').classList.remove('hidden');
+        });
+        
+        window.addEventListener('online', function() {
+            document.getElementById('offline-overlay').classList.add('hidden');
+        });
+
+        // FUNGSI MUAT ULANG IFRAME (Jika nge-blank)
+        function refreshIframe() {
+            const iframe = document.getElementById('exam-frame');
+            // Menambahkan parameter waktu agar browser memaksa reload tanpa menggunakan cache lama
+            const currentUrl = iframe.src.split('?')[0]; 
+            if(currentUrl && currentUrl !== "about:blank") {
+                iframe.src = iframe.src; // Reload metode standar iframe
+            }
+        }
+
         async function fetchWithRetry(url, retries = 4, delay = 1500) {
             for (let i = 0; i < retries; i++) {
                 try {
@@ -138,22 +250,21 @@
                     if (!response.ok) throw new Error("Server Error");
                     return await response.json();
                 } catch (error) {
-                    if (i === retries - 1) throw error; // Jika percobaan terakhir gagal, lemparkan error
+                    if (i === retries - 1) throw error; 
                     console.log(`Server sibuk. Percobaan ulang ke-${i + 1} dalam ${delay}ms...`);
-                    // Tunggu sebelum mencoba lagi
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    delay += 1000; // Tambah jeda (Backoff) untuk percobaan berikutnya
+                    delay += 1000; 
                 }
             }
         }
 
         window.onload = async function() {
             try {
-                // Menggunakan fetchWithRetry agar inisialisasi tidak gagal saat server padat
                 const data = await fetchWithRetry(APPS_SCRIPT_URL + "?action=init", 3, 2000);
 
                 if (data && data.status === 'success') {
-                    document.getElementById('school-name-display').innerText = data.schoolName;
+                    // Menghilangkan skeleton loading dengan cara mereset innerHTML
+                    document.getElementById('school-name-display').innerHTML = data.schoolName;
                     document.getElementById('header-school-name').innerText = data.schoolName;
                     
                     if (data.schoolLogo && data.schoolLogo.trim() !== "") {
@@ -179,9 +290,7 @@
             document.querySelector('.loader').classList.add('hidden');
         }
 
-        // Fungsi Fullscreen yang disesuaikan
         function enterFullScreen() {
-            // Pengecualian: Jangan paksa fullscreen API pada iOS karena Apple sangat membatasi ini
             if (isIOS) return; 
 
             const elem = document.documentElement;
@@ -200,61 +309,95 @@
             const errorMsg = document.getElementById('form-error');
             
             if (usernameInput === "") {
-                errorMsg.innerText = "Username / NISN harus diisi!";
+                errorMsg.innerText = "USERNAME HARUS DIISI!";
                 errorMsg.classList.remove('hidden');
+                document.getElementById('username').focus();
                 return;
             }
             errorMsg.classList.add('hidden');
 
             const originalText = btn.innerHTML;
             
-            // Indikasi sistem sedang bekerja keras (antre ke Google)
-            btn.innerHTML = 'MENGANTRE KE SERVER... <div class="loader inline-block ml-2 w-5 h-5 border-2"></div>';
+            // Animasi tombol saat proses
+            btn.innerHTML = '<span class="relative z-10 flex items-center">MENGOTENTIKASI... <div class="loader-sm inline-block ml-3 w-5 h-5 border-[2px] border-white/50 border-t-white"></div></span>';
             btn.disabled = true;
-            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btn.classList.add('opacity-90', 'cursor-not-allowed', 'scale-[0.98]');
 
             try {
-                // Gunakan fetchWithRetry: Akan mencoba sampai 4 kali jika 750 siswa barengan klik
                 const urlTarget = APPS_SCRIPT_URL + "?action=login&username=" + encodeURIComponent(usernameInput);
                 const data = await fetchWithRetry(urlTarget, 4, 1500);
                 
                 if (data && data.status === 'success') {
                     const decodedUrl = atob(data.url);
-
                     document.getElementById('student-info-display').innerText = `${data.studentName} (${data.studentClass})`;
 
-                    document.getElementById('landing-page').classList.add('hidden');
-                    document.getElementById('landing-page').classList.remove('flex');
-                    document.getElementById('exam-page').classList.remove('hidden');
-                    document.getElementById('exam-page').classList.add('flex');
+                    // Pengecekan Login Count
+                    const storageKey = 'loginCount_' + usernameInput.toUpperCase();
+                    let loginCount = parseInt(localStorage.getItem(storageKey)) || 0;
+                    loginCount++; 
+                    localStorage.setItem(storageKey, loginCount);
                     
-                    document.getElementById('exam-frame').src = decodedUrl;
+                    // Log ke console untuk mempermudah pengecekan saat testing
+                    console.log(`[INFO KEAMANAN] Siswa ${data.studentName} telah login sebanyak: ${loginCount} kali.`);
+
+                    if (loginCount >= 3) {
+                        const modal = document.getElementById('login-warning-modal');
+                        document.getElementById('login-warning-message').innerHTML = `Halo <b>${data.studentName}</b>,<br>Sistem mendeteksi Anda telah melakukan <b>${loginCount}x Login</b>!`;
+                        
+                        // Hapus status hidden dan tambahkan flex agar modal otomatis ke tengah
+                        modal.classList.remove('hidden');
+                        modal.classList.add('flex');
+                        
+                        window.pendingExamUrl = decodedUrl;
+                    } else {
+                        executeExamTransition(decodedUrl);
+                    }
                     
-                    enterFullScreen();
-                    
-                    isExamActive = true;
-                    setTimeout(activateAntiCheat, 2000);
                 } else {
                     throw new Error(data ? data.message : "Respons server tidak valid.");
                 }
             } catch (error) {
                 console.error("Login Error:", error);
                 errorMsg.innerText = error.message === "Server Error" 
-                    ? "Server sedang padat. Silakan tekan tombol Masuk lagi." 
-                    : (error.message || "Gagal masuk. Periksa Username Anda.");
+                    ? "SERVER PADAT. TEKAN MULAI LAGI." 
+                    : (error.message || "GAGAL MASUK. PERIKSA ID ANDA.");
                 errorMsg.classList.remove('hidden');
                 
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btn.classList.remove('opacity-90', 'cursor-not-allowed', 'scale-[0.98]');
+            }
+        }
+
+        function executeExamTransition(decodedUrl) {
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('landing-page').classList.remove('flex');
+            document.getElementById('exam-page').classList.remove('hidden');
+            document.getElementById('exam-page').classList.add('flex');
+            
+            document.getElementById('exam-frame').src = decodedUrl;
+            
+            enterFullScreen();
+            
+            isExamActive = true;
+            setTimeout(activateAntiCheat, 2500); // Sedikit delay agar fullscreen selesai terbentuk
+        }
+
+        function closeWarningModal() {
+            const modal = document.getElementById('login-warning-modal');
+            // Kembalikan status modal menjadi tersembunyi
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            
+            if (window.pendingExamUrl) {
+                executeExamTransition(window.pendingExamUrl);
+                window.pendingExamUrl = null; 
             }
         }
 
         function activateAntiCheat() {
-            // Sensor Visibility (minimize app) AKTIF untuk SEMUA perangkat (Android, PC, iOS)
             document.addEventListener('visibilitychange', checkVisibility);
             
-            // Sensor Fullscreen HANYA diaktifkan jika BUKAN iOS
             if (!isIOS) {
                 document.addEventListener('fullscreenchange', checkFullScreen);
                 document.addEventListener('webkitfullscreenchange', checkFullScreen);
@@ -268,7 +411,7 @@
         }
 
         function checkFullScreen() {
-            if (isIOS) return; // Pengaman ganda untuk iOS
+            if (isIOS) return; 
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 triggerCheatDetected("Keluar dari mode Layar Penuh (Full Screen)");
             }
@@ -277,7 +420,7 @@
         function triggerCheatDetected(reason) {
             if (!isExamActive) return; 
             
-            console.log("Pelanggaran: " + reason);
+            console.log("Pelanggaran Keamanan: " + reason);
             isExamActive = false; 
 
             const iframe = document.getElementById('exam-frame');
